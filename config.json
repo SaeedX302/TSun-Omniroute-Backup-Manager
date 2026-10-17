@@ -1,0 +1,18 @@
+{
+  "vps_user": "saeed",
+  "vps_host": "ip-172-31-37-134",
+  "source_dir": "/home/saeed/.omniroute",
+  "staging_dir": "/tmp",
+  "archive_prefix": "omniroute",
+  "date_format": "%d-%m-%y",
+  "rclone_binary": "rclone",
+  "rclone_remote": "gdrive",
+  "drive_folder": "omnirote",
+  "cron_minute": 1,
+  "cron_hour": 0,
+  "delete_local_after_upload": true,
+  "verify_remote_after_upload": true,
+  "retention_days": 0,
+  "dashboard_host": "127.0.0.1",
+  "dashboard_port": 20371
+}

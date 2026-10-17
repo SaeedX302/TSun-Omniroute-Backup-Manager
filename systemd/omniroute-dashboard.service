@@ -1,0 +1,18 @@
+[Unit]
+Description=OmniRoute Daily Backup Web Dashboard & Scheduler
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=saeed
+Group=saeed
+WorkingDirectory=/home/saeed/omniroute-backup-manager
+ExecStart=/usr/bin/python3 /home/saeed/omniroute-backup-manager/app.py --host 0.0.0.0 --port 8080 --with-scheduler
+Restart=always
+RestartSec=5
+StandardOutput=append:/home/saeed/omniroute-backup-manager/logs/dashboard.log
+StandardError=append:/home/saeed/omniroute-backup-manager/logs/dashboard.log
+
+[Install]
+WantedBy=multi-user.target
