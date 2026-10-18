@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>omniroute • saeed@ip-172-31-37-134</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&amp;family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['"Geist"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['"Geist Mono"', 'ui-monospace', '"SF Mono"', 'Menlo', 'monospace']
+        },
+        colors: {
+          background: '#0a0a0a',
+          foreground: '#ededed',
+          card: '#0f0f0f',
+          'card-foreground': '#ededed',
+          popover: '#141414',
+          'popover-foreground': '#ededed',
+          primary: '#ffffff',
+          'primary-foreground': '#0a0a0a',
+          secondary: '#141414',
+          'secondary-foreground': '#ededed',
+          muted: '#141414',
+          'muted-foreground': '#9a9a9a',
+          accent: '#1a1a1a',
+          'accent-foreground': '#ededed',
+          destructive: '#e0726a',
+          border: '#1f1f1f',
+          input: '#333333',
+          ring: '#777777'
+        },
+        borderRadius: {
+          sm: '5px',
+          md: '6px',
+          lg: '8px',
+          xl: '11px',
+          full: '9999px'
+        }
+      }
+    }
+  };
+</script>
+<style>
+  :root {
+    color-scheme: dark;
+  }
+  body {
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    background-color: #0a0a0a;
+    color: #ededed;
+    letter-spacing: -0.011em;
+  }
+  .sec-label {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #9a9a9a;
+  }
+  .cap-num {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: #9a9a9a;
+  }
+  /* Refined minimal scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: #0a0a0a; }
+  ::-webkit-scrollbar-thumb { background: #262626; border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #333333; }
+
+  @keyframes pulseSubtle {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+  .dot-pulse {
+    animation: pulseSubtle 2s ease-in-out infinite;
+  }
+
+  @keyframes progressLinear {
+    0% { background-position: 0 0; }
+    100% { background-position: 24px 0; }
+  }
+  .active-stripe {
+    background-image: repeating-linear-gradient(45deg, #262626, #262626 6px, #1f1f1f 6px, #1f1f1f 12px);
+    background-size: 24px 24px;
+    animation: progressLinear 1.4s linear infinite;
+  }
+</style>
+</head>
+<body class="min-h-screen bg-[#0a0a0a] text-[#ededed] antialiased selection:bg-[#262626] selection:text-[#ffffff] flex flex-col">
+<!-- Top Hairline Notification Stack -->
+<div class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-3 sm:px-0" id="toastStack"></div>
+<!-- Restore Modal (Hairline Dialog) -->
+<div class="fixed inset-0 z-50 hidden items-center justify-center bg-black/75 backdrop-blur-[2px] p-4 transition-opacity duration-150 opacity-0 pointer-events-none" id="restoreModal">
+<div class="relative bg-[#0f0f0f] border border-[#1f1f1f] rounded-[8px] max-w-xl w-full p-5 sm:p-6 shadow-2xl transition-transform duration-150 transform scale-[0.98]" id="restoreModalCard">
+<div class="flex items-start justify-between gap-4 mb-4 pb-3 border-b border-[#1f1f1f]">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="sec-label">Restore Snapshot</span>
+<span class="font-mono text-[11px] text-[#9a9a9a]">• sha256 verified</span>
+</div>
+<h3 class="font-mono text-sm font-semibold text-[#ededed]" id="modalArchiveName">omniroute-16-10-26.tar.gz</h3>
+</div>
+<button aria-label="Close dialog" class="text-[#9a9a9a] hover:text-[#ededed] p-1 rounded-[5px] hover:bg-[#1a1a1a] transition" id="closeModalBtn" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+</button>
+</div>
+<p class="text-xs text-[#9a9a9a] leading-relaxed mb-3">
+      Pull remote object from Google Drive and unpack to host <span class="font-mono text-[#ededed]" id="modalHost">the VPS</span>:
+    </p>
+<div class="relative bg-[#0a0a0a] border border-[#1f1f1f] rounded-[6px] p-3 mb-4">
+<button class="absolute top-2.5 right-2.5 text-[11px] font-mono px-2 py-1 rounded-[5px] bg-[#141414] hover:bg-[#1a1a1a] text-[#ededed] border border-[#1f1f1f] transition" id="copyModalBtn" type="button">
+        Copy Commands
+      </button>
+<pre class="font-mono text-[11.5px] text-[#ededed] whitespace-pre-wrap leading-relaxed overflow-x-auto pr-24" id="modalRestoreScript"></pre>
+</div>
+<div class="flex items-center justify-between pt-3 border-t border-[#1f1f1f]">
+<span class="font-mono text-[11px] text-[#9a9a9a]" id="modalNoteExtract">Unpacks directly to source parent</span>
+<button class="h-8 px-3.5 rounded-[6px] text-xs font-medium bg-[#141414] hover:bg-[#1a1a1a] text-[#ededed] border border-[#333333] transition" id="closeModalBottomBtn" type="button">
+        Close
+      </button>
+</div>
+</div>
+</div>
+<!-- Frame Guides Container (1200px column bounded by hairlines) -->
+<div class="w-full max-w-[1200px] mx-auto border-x border-[#1f1f1f] min-h-screen flex flex-col bg-[#0a0a0a]">
+<!-- TOP APP CHROME -->
+<header class="border-b border-[#1f1f1f] bg-[#0a0a0a] sticky top-0 z-40">
+<div class="px-5 sm:px-6">
+<!-- Main Row -->
+<div class="h-14 flex items-center justify-between gap-4">
+<!-- Wordmark & Context Metadata -->
+<div class="flex items-center gap-3">
+<span class="font-mono text-sm font-semibold tracking-tight text-[#ededed] lowercase">omniroute</span>
+<div class="hidden md:flex items-center gap-2 pl-2 border-l border-[#1f1f1f] font-mono text-[12px] text-[#9a9a9a]">
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-[#ededed] dot-pulse" id="headerStatusDot"></span>
+<span class="text-[#ededed]" id="headerContextHost">connecting…</span>
+<span class="text-[#333333]" id="headerContextSep1" style="display:none">/</span>
+<span id="headerContextSource" style="display:none"></span>
+<span class="text-[#333333]" id="headerContextSep2" style="display:none">→</span>
+<span id="headerContextRemote" style="display:none"></span>
+</div>
+</div>
+<!-- Controls Cluster -->
+<div class="flex items-center gap-2">
+<button class="h-8 px-3 rounded-[6px] text-xs font-medium font-sans bg-transparent hover:bg-[#141414] text-[#ededed] border border-[#333333] transition flex items-center gap-1.5 active:scale-[0.99]" id="verifyRcloneBtn" type="button">
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-[#9a9a9a]" id="verifyStatusDot"></span>
+<span>Verify rclone</span>
+</button>
+<button class="h-8 px-3.5 rounded-[6px] text-xs font-medium font-sans bg-[#ffffff] hover:bg-[#ededed] text-[#0a0a0a] transition flex items-center gap-1.5 active:scale-[0.99]" id="runBackupBtn" type="button">
+<span class="hidden w-3 h-3 border-2 border-[#0a0a0a] border-t-transparent rounded-full animate-spin" id="runBtnSpinner"></span>
+<span id="backupBtnLabel">Run Backup Now</span>
+</button>
+</div>
+</div>
+<!-- Navigation Tabs (Geist Mono, minimal line style) -->
+<nav class="flex items-center gap-1 overflow-x-auto border-t border-[#1f1f1f] no-scrollbar -mb-[1px]">
+<button class="tab-pill active flex items-center gap-2 py-2.5 px-3 font-mono text-xs font-medium border-b-2 border-[#ededed] text-[#ededed] whitespace-nowrap transition-colors" data-tab="pipeline">
+<span class="text-[#9a9a9a]">01</span>
+<span>Pipeline &amp; Audit</span>
+</button>
+<button class="tab-pill flex items-center gap-2 py-2.5 px-3 font-mono text-xs font-medium border-b-2 border-transparent text-[#9a9a9a] hover:text-[#ededed] whitespace-nowrap transition-colors" data-tab="remote">
+<span class="text-[#9a9a9a]">02</span>
+<span id="tabRemoteLabel">Remote Storage</span>
+</button>
+<button class="tab-pill flex items-center gap-2 py-2.5 px-3 font-mono text-xs font-medium border-b-2 border-transparent text-[#9a9a9a] hover:text-[#ededed] whitespace-nowrap transition-colors" data-tab="config">
+<span class="text-[#9a9a9a]">03</span>
+<span>Schedule &amp; Crontab</span>
+</button>
+<button class="tab-pill flex items-center gap-2 py-2.5 px-3 font-mono text-xs font-medium border-b-2 border-transparent text-[#9a9a9a] hover:text-[#ededed] whitespace-nowrap transition-colors" data-tab="code">
+<span class="text-[#9a9a9a]">04</span>
+<span id="tabSourceLabel">Source Files</span>
+</button>
+<button class="tab-pill flex items-center gap-2 py-2.5 px-3 font-mono text-xs font-medium border-b-2 border-transparent text-[#9a9a9a] hover:text-[#ededed] whitespace-nowrap transition-colors" data-tab="runbook">
+<span class="text-[#9a9a9a]">05</span>
+<span>VPS Runbook</span>
+</button>
+</nav>
+</div>
+</header>
+<!-- BODY CONTENT AREA -->
+<main class="flex-1 px-5 sm:px-6 py-6 space-y-6">
+<!-- KPI ROW (4 Hairline Cells) -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border border-[#1f1f1f] rounded-[8px] divide-y sm:divide-y-0 sm:divide-x divide-[#1f1f1f] bg-[#0f0f0f]">
+<!-- Cell 1 -->
+<div class="p-4 flex flex-col justify-between">
+<div class="flex items-center justify-between mb-2">
+<span class="sec-label">VPS Source</span>
+<span class="font-mono text-[11px] text-[#9a9a9a]" id="kpiSourceBadge">—</span>
+</div>
+<div class="font-mono text-xs font-semibold text-[#ededed] truncate" id="kpiSourceDir">—</div>
+<div class="font-mono text-[11px] text-[#9a9a9a] mt-2 flex items-center justify-between">
+<span id="kpiSourceMeta">payload staging</span>
+<span class="text-[#ededed]" id="kpiSourceBytes">—</span>
+</div>
+</div>
+<!-- Cell 2 -->
+<div class="p-4 flex flex-col justify-between">
+<div class="flex items-center justify-between mb-2">
+<span class="sec-label">Active Target</span>
+<span class="font-mono text-[11px] text-[#ededed]" id="kpiTargetBadge">DAILY</span>
+</div>
+<div class="font-mono text-xs font-semibold text-[#ededed] truncate" id="kpiArchiveLabel">—</div>
+<div class="font-mono text-[11px] text-[#9a9a9a] mt-2">
+<span id="kpiTargetMeta">—</span>
+</div>
+</div>
+<!-- Cell 3 -->
+<div class="p-4 flex flex-col justify-between">
+<div class="flex items-center justify-between mb-2">
+<span class="sec-label">Remote Destination</span>
+<span class="font-mono text-[11px] text-[#9a9a9a]">RCLONE</span>
+</div>
+<div class="font-mono text-xs font-semibold text-[#ededed] truncate" id="kpiRemoteSpec">—</div>
+<div class="font-mono text-[11px] text-[#9a9a9a] mt-2 flex items-center justify-between">
+<span id="kpiRemoteCount">—</span>
+<span class="text-[#ededed]" id="kpiRemoteBytes">—</span>
+</div>
+</div>
+<!-- Cell 4 -->
+<div class="p-4 flex flex-col justify-between">
+<div class="flex items-center justify-between mb-2">
+<span class="sec-label">Cron Trigger</span>
+<span class="font-mono text-[11px] text-[#ededed]" id="kpiCronState">—</span>
+</div>
+<div class="font-mono text-xs font-semibold text-[#ededed]" id="kpiCronLine">—</div>
+<div class="font-mono text-[11px] text-[#9a9a9a] mt-2 flex items-center justify-between">
+<span id="kpiCronMeta">daily schedule</span>
+<span class="text-[#ededed]" id="kpiCronNext">—</span>
+</div>
+</div>
+</section>
+<!-- TAB 1: PIPELINE & AUDIT LOG -->
+<div class="space-y-6" id="tabContent-pipeline">
+<!-- PIPELINE ARCHITECTURE (CardStack Card) -->
+<section class="border border-[#1f1f1f] bg-[#0f0f0f] rounded-[8px] p-5">
+<div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#1f1f1f]">
+<div>
+<div class="flex items-center gap-2.5">
+<span class="sec-label">Execution Pipeline</span>
+<span class="font-mono text-[11px] px-1.5 py-0.5 rounded-[5px] bg-[#141414] border border-[#1f1f1f] text-[#9a9a9a]">ATOMIC ORDER</span>
+</div>
+<p class="text-xs text-[#9a9a9a] mt-0.5">Enforced sequentially by <span class="font-mono text-[#ededed]">backup_engine.py</span> with immediate rollback on step failure.</p>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-2 font-mono text-[11px] text-[#9a9a9a] px-2.5 py-1 rounded-[5px] bg-[#141414] border border-[#1f1f1f]" id="telemetryPill">
+<span>Throughput: <strong class="text-[#ededed] font-medium" id="speedGauge">—</strong></span>
+<span class="text-[#333333]">|</span>
+<span>Processed: <strong class="text-[#ededed] font-medium" id="byteCountGauge">—</strong></span>
+</div>
+<span class="font-mono text-[11px] px-2.5 py-1 rounded-[5px] bg-[#141414] border border-[#1f1f1f] text-[#ededed] flex items-center gap-1.5" id="pipelineOverallStatus">
+<span class="w-1.5 h-1.5 rounded-full bg-[#9a9a9a]"></span>
+<span>STANDBY</span>
+</span>
+</div>
+</div>
+<!-- Hairline Progress Line -->
+<div class="pt-4 pb-3">
+<div class="h-1.5 w-full bg-[#141414] rounded-full overflow-hidden border border-[#1f1f1f]">
+<div class="h-full bg-[#ffffff] transition-all duration-200 w-0" id="pipelineProgressBar"></div>
+</div>
+<div class="flex justify-between items-center font-mono text-[11px] text-[#9a9a9a] mt-1.5">
+<span id="pipelineProgressStepLabel">Pipeline idle • Click "Run Backup Now" to trigger</span>
+<span id="pipelineProgressEta">ETA: —</span>
+</div>
+</div>
+<!-- 4 Sequential Step Rows (CardStack Style) -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-3 pt-2">
+<!-- Step 01 -->
+<div class="border border-[#1f1f1f] bg-[#0a0a0a] rounded-[6px] p-3 transition-colors" id="stepCard1">
+<div class="flex items-center justify-between mb-2">
+<span class="cap-num">01 COMPRESS</span>
+<span class="font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] bg-[#141414] text-[#9a9a9a] border border-[#1f1f1f]" id="stepBadge1">READY</span>
+</div>
+<div class="font-mono text-[11px] text-[#ededed] truncate" id="stepCmd1">tar -czf /tmp/omniroute-*.tar.gz</div>
+<p class="text-[11.5px] text-[#9a9a9a] mt-1.5 leading-snug">Gzip level 6 compression with recursive sha256 checksum.</p>
+</div>
+<!-- Step 02 -->
+<div class="border border-[#1f1f1f] bg-[#0a0a0a] rounded-[6px] p-3 transition-colors" id="stepCard2">
+<div class="flex items-center justify-between mb-2">
+<span class="cap-num">02 RCLONE STREAM</span>
+<span class="font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] bg-[#141414] text-[#9a9a9a] border border-[#1f1f1f]" id="stepBadge2">READY</span>
+</div>
+<div class="font-mono text-[11px] text-[#ededed] truncate" id="stepCmd2">rclone copyto ... gdrive:omnirote/</div>
+<p class="text-[11.5px] text-[#9a9a9a] mt-1.5 leading-snug">Encrypted chunk transfer directly to Google Drive destination.</p>
+</div>
+<!-- Step 03 -->
+<div class="border border-[#1f1f1f] bg-[#0a0a0a] rounded-[6px] p-3 transition-colors" id="stepCard3">
+<div class="flex items-center justify-between mb-2">
+<span class="cap-num">03 REMOTE VERIFY</span>
+<span class="font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] bg-[#141414] text-[#9a9a9a] border border-[#1f1f1f]" id="stepBadge3">READY</span>
+</div>
+<div class="font-mono text-[11px] text-[#ededed] truncate" id="stepCmd3">rclone lsjson &amp; byte validation</div>
+<p class="text-[11.5px] text-[#9a9a9a] mt-1.5 leading-snug">Remote object byte count must match staging byte-for-byte.</p>
+</div>
+<!-- Step 04 -->
+<div class="border border-[#1f1f1f] bg-[#0a0a0a] rounded-[6px] p-3 transition-colors" id="stepCard4">
+<div class="flex items-center justify-between mb-2">
+<span class="cap-num">04 VPS AUTO-PURGE</span>
+<span class="font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] bg-[#141414] text-[#9a9a9a] border border-[#1f1f1f]" id="stepBadge4">READY</span>
+</div>
+<div class="font-mono text-[11px] text-[#ededed] truncate" id="stepCmd4">os.unlink(/tmp/staging)</div>
+<p class="text-[11.5px] text-[#9a9a9a] mt-1.5 leading-snug">Immediate local disk unlinking to prevent persistent VPS bloat.</p>
+</div>
+</div>
+</section>
+<!-- DUAL WORKBENCH: AUDIT TABLE + TERMINAL CONSOLE -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- AUDIT TABLE -->
+<div class="lg:col-span-7 border border-[#1f1f1f] bg-[#0f0f0f] rounded-[8px] p-5 flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between pb-3 mb-3 border-b border-[#1f1f1f]">
+<div>
+<div class="flex items-center gap-2">
+<span class="sec-label">Audit Log</span>
+<span class="font-mono text-[11px] text-[#9a9a9a]">backup_history.db</span>
+</div>
+<p class="text-xs text-[#9a9a9a] mt-0.5">Persistent SQLite ledger of verified remote uploads.</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-mono text-[11px] px-2 py-0.5 rounded-[5px] bg-[#141414] border border-[#1f1f1f] text-[#9a9a9a]" id="auditCountBadge">— records</span>
+<button class="h-7 px-2.5 rounded-[6px] font-mono text-[11px] bg-transparent hover:bg-[#141414] text-[#ededed] border border-[#333333] transition" id="refreshAuditBtn" type="button">
+                  Refresh
+                </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse font-sans text-xs">
+<thead>
+<tr class="border-b border-[#1f1f1f] font-mono text-[10px] uppercase tracking-wider text-[#9a9a9a]">
+<th class="py-2 pr-3">Target Snapshot</th>
+<th class="py-2 px-2">Timestamp (UTC)</th>
+<th class="py-2 px-2 text-right">Size</th>
+<th class="py-2 px-2 text-center">Local Purge</th>
+<th class="py-2 pl-2 text-right">Drive State</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#1f1f1f]" id="auditTableBody">
+<!-- Populated dynamically via JS -->
+</tbody>
+</table>
+</div>
+</div>
+<div class="pt-3 mt-3 border-t border-[#1f1f1f] flex items-center justify-between font-mono text-[11px] text-[#9a9a9a]">
+<span>SQLite3 WAL-mode storage</span>
+<span>Zero lingering /tmp files</span>
+</div>
+</div>
+<!-- HOST TERMINAL CONSOLE -->
+<div class="lg:col-span-5 border border-[#1f1f1f] bg-[#0f0f0f] rounded-[8px] p-5 flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between pb-3 mb-3 border-b border-[#1f1f1f]">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-[#ededed]"></span>
+<span class="sec-label">Host Console</span>
+<span class="font-mono text-[10px] px-1.5 py-0.2 rounded-[5px] bg-[#141414] border border-[#1f1f1f] text-[#ededed]">TTY</span>
+</div>
+<div class="flex items-center gap-1.5">
+<button class="h-7 px-2 font-mono text-[11px] rounded-[5px] bg-transparent hover:bg-[#141414] text-[#9a9a9a] hover:text-[#ededed] border border-[#333333] transition" id="tailLogsBtn" type="button">Tail</button>
+<button class="h-7 px-2 font-mono text-[11px] rounded-[5px] bg-transparent hover:bg-[#141414] text-[#9a9a9a] hover:text-[#ededed] border border-[#333333] transition" id="clearTermBtn" type="button">Clear</button>
+</div>
+</div>
+<!-- Terminal Window -->
+<div class="border border-[#1f1f1f] bg-[#0a0a0a] rounded-[6px] overflow-hidden">
+<div class="px-3 py-1.5 border-b border-[#1f1f1f] bg-[#0f0f0f] flex items-center justify-between font-mono text-[11px] text-[#9a9a9a]">
+<span id="termHostLabel">—</span>
+<span id="termHostShell">—</span>
+</div>
+<div class="p-3 font-mono text-[11.5px] text-[#ededed] h-72 overflow-y-auto space-y-1 leading-relaxed" id="terminalStream">
+<div class="flex items-center gap-1 pt-1 text-[#9a9a9a]" id="termCursorRow">
+<span class="text-[#ededed]" id="termPrompt">$</span>
+<span class="inline-block w-1.5 h-3.5 bg-[#ededed] animate-pulse"></span>
+</div>
+</div>
+</div>
+</div>
+<div class="pt-3 mt-3 border-t border-[#1f1f1f] flex items-center justify-between font-mono text-[11px] text-[#9a9a9a]">
+<span>logs/backup.log</span>
+<span>buffered standard out</span>
+</div>
+</div>
+</div>
+</div>
+<!-- TAB 2: REMOTE STORAGE EXPLORER -->
+<div class="hidden space-y-6" id="tabContent-remote">
+<div class="border border-[#1f1f1f] bg-[#0f0f0f] rounded-[8px] p-5">
+<div class="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-[#1f1f1f]">
+<div>
+<div class="flex items-center gap-2.5">
+<span class="sec-label">Remote Storage</span>
+<span class="font-mono text-xs px-2 py-0.5 rounded-[5px] bg-[#141414] border border-[#1f1f1f] text-[#ededed]" id="remoteSpecChip">
+                —
+              </span>
+</div>
+<p class="text-xs text-[#9a9a9a] mt-0.5">Live file list verified via <span class="font-mono text-[#ededed]" id="remoteTabHint">rclone lsjson</span>. Click Restore to generate CLI unpack commands.</p>
+</div>
+<button class="h-8 px-3 rounded-[6px] font-mono text-xs bg-transparent hover:bg-[#141414] text-[#ededed] border border-[#333333] transition flex items-center gap-1.5" id="refreshRemoteExplorerBtn" type="button">
+<svg class="w-3.5 h-3.5 text-[#9a9a9a]" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+<span>Sync Registry</span>
+</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse font-sans text-xs">
+<thead>
+<tr class="border-b border-[#1f1f1f] font-mono text-[10px] uppercase tracking-wider text-[#9a9a9a]">
+<th class="py-2.5 pr-4">Snapshot Filename</th>
+<th class="py-2.5 px-4">Remote Destination</th>
+<th class="py-2.5 px-4">Uploaded (UTC)</th>
+<th class="py-2.5 px-4 text-right">Size</th>
+<th class="py-2.5 px-4">SHA-256 (Truncated)</th>
+<th class="py-2.5 pl-4 text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#1f1f1f]" id="remoteExplorerTableBody">
+<!-- Rendered via JS -->
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- TAB 3: CONFIGURATION & CRONTAB -->
+<div class="hidden space-y-6" id="tabContent-config">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- CONFIG FORM -->
+<form class="lg:col-span-7 border border-[#1f1f1f] bg-[#0f0f0f] rounded-[8px] p-5 space-y-4" id="configParametersForm">
+<div class="flex items-center justify-between pb-3 border-b border-[#1f1f1f]">
+<div>
+<div class="flex items-center gap-2">
+<span class="sec-label">Daemon Parameters</span>
+<span class="font-mono text-[11px] text-[#9a9a9a]">config.json</span>
+</div>
+<p class="text-xs text-[#9a9a9a] mt-0.5">Parameters applied to scheduled crontab jobs and ad-hoc execution.</p>
+</div>
+<button class="h-8 px-3.5 rounded-[6px] text-xs font-medium font-sans bg-[#ffffff] hover:bg-[#ededed] text-[#0a0a0a] transition" type="submit">
+              Save Parameters
+            </button>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+<div>
+<label class="block font-mono text-[11px] text-[#9a9a9a] mb-1 uppercase">VPS Target Host</label>
+<input class="w-full h-8 px-3 rounded-[6px] bg-[#0a0a0a] border border-[#333333] font-mono text-xs text-[#ededed] focus:outline-none focus:border-[#777777] transition" id="cfgVpsHost" type="text" value="saeed@ip-172-31-37-134"/>
+</div>
+<div>
+<label class="block font-mono text-[11px] text-[#9a9a9a] mb-1 uppercase">Source Directory</label>
+<input class="w-full h-8 px-3 rounded-[6px] bg-[#0a0a0a] border border-[#333333] font-mono text-xs text-[#ededed] focus:outline-none focus:border-[#777777] transition" id="cfgSourceDir" type="text" value="/home/saeed/.omniroute"/>
+</div>
+<div>
+<label class="block font-mono text-[11px] text-[#9a9a9a] mb-1 uppercase">Staging Temporary Dir</label>
+<input class="w-full h-8 px-3 rounded-[6px] bg-[#0a0a0a] border border-[#333333] font-mono text-xs text-[#ededed] focus:outline-none focus:border-[#777777] transition" id="cfgStagingDir" type="text" value="/tmp"/>
+</div>
+<div>
+<label class="block font-mono text-[11px] text-[#9a9a9a] mb-1 uppercase">Rclone Remote Name</label>
+<input class="w-full h-8 px-3 rounded-[6px] bg-[#0a0a0a] border border-[#333333] font-mono text-xs text-[#ededed] focus:outline-none focus:border-[#777777] transition" id="cfgRemoteName" type="text" value="gdrive"/>
+</div>
+<div class="sm:col-span-2">
+<div class="flex items-center justify-between mb-1">
+<label class="block font-mono text-[11px] text-[#9a9a9a] uppercase">Remote Folder Target</label>
+<div class="flex items-center gap-1.5 font-mono text-[11px]">
+<button class="px-2 py-0.5 rounded-[5px] bg-[#141414] hover:bg-[#1a1a1a] text-[#ededed] border border-[#1f1f1f]" id="btnQuickOmnirote" type="button">set omnirote</button>
+<button class="px-2 py-0.5 rounded-[5px] bg-[#141414] hover:bg-[#1a1a1a] text-[#ededed] border border-[#1f1f1f]" id="btnQuickOmniroute" type="button">set omniroute</button>
+</div>
+</div>
+<input class="w-full h-8 px-3 rounded-[6px] bg-[#0a0a0a] border border-[#333333] font-mono text-xs text-[#ededed] focus:outline-none focus:border-[#777777] transition" id="cfgDriveFolder" type="text" value="omnirote"/>
+</div>
+<div>
+<label class="block font-mono text-[11px] text-[#9a9a9a] mb-1 uppercase">Cron Hour (UTC)</label>
+<input class="w-full h-8 px-3 rounded-[6px] bg-[#0a0a0a] border border-[#333333] font-mono text-xs text-[#ededed] focus:outline-none focus:border-[#777777] transition" id="cfgCronHour" max="23" min="0" type="number" value="0"/>
+</div>
+<div>
+<label class="block font-mono text-[11px] text-[#9a9a9a] mb-1 uppercase">Cron Minute</label>
+<input class="w-full h-8 px-3 rounded-[6px] bg-[#0a0a0a] border border-[#333333] font-mono text-xs text-[#ededed] focus:outline-none focus:border-[#777777] transition" id="cfgCronMin" max="59" min="0" type="number" value="1"/>
+</div>
+</div>
+<div class="pt-3 border-t border-[#1f1f1f]">
+<label class="flex items-start gap-2.5 cursor-pointer">
+<input checked="" class="mt-0.5 rounded-[3px] bg-[#0a0a0a] border-[#333333] text-[#ffffff] focus:ring-0 focus:ring-offset-0" id="cfgAutoPurgeLocal" type="checkbox"/>
+<span class="text-xs text-[#9a9a9a] leading-relaxed">
+<span class="text-[#ededed] font-medium">Automatic staging cleanup:</span> Unlink staging <span class="font-mono text-[#ededed]">/tmp/omniroute-*.tar.gz</span> immediately after Google Drive verification passes.
+              </span>
+</label>
+</div>
+</form>
+<!-- CRONTAB SYNCHRONIZER -->
+<div class="lg:col-span-5 border border-[#1f1f1f] bg-[#0f0f0f] rounded-[8px] p-5 flex flex-col justify-between">
+<div class="space-y-4">
+<div class="pb-3 border-b border-[#1f1f1f]">
+<span class="sec-label">System Schedule</span>
+<h3 class="text-sm font-semibold text-[#ededed] mt-1" id="cronTitle">Daily backup trigger</h3>
+<p class="text-xs text-[#9a9a9a] mt-0.5">Active crontab directive on <span class="font-mono text-[#ededed]" id="cronHostLabel">the host</span></p>
+</div>
+<!-- Crontab Raw Line Box -->
+<div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-[6px] p-3">
+<div class="sec-label mb-1.5">Direct Crontab Directive</div>
+<pre class="font-mono text-[11px] text-[#ededed] whitespace-pre-wrap break-all leading-relaxed select-all" id="crontabRenderedLine">— awaiting crontab status —<!-- &gt;&gt; /home/saeed/omniroute-backup-manager/logs/cron.log 2&gt;&amp;1 --></pre>
+</div>
+<div class="border border-[#1f1f1f] bg-[#0a0a0a] rounded-[6px] p-3 font-mono text-[11px] space-y-2 text-[#9a9a9a]">
+<div class="flex justify-between items-center"><span>Scheduled Time:</span><span class="text-[#ededed] font-medium" id="cronSummaryMin">00:01 UTC (12:01 AM)</span></div>
+<div class="flex justify-between items-center"><span>Archive Naming:</span><span class="text-[#ededed]" id="cronSummaryArchive">omniroute-16-10-26.tar.gz</span></div>
+<div class="flex justify-between items-center"><span>Destination:</span><span class="text-[#ededed]" id="cronSummaryDest">gdrive:omnirote</span></div>
+</div>
+</div>
+<div class="space-y-2 pt-4">
+<button class="w-full h-8 px-3 rounded-[6px] text-xs font-medium font-sans bg-[#ffffff] hover:bg-[#ededed] text-[#0a0a0a] transition active:scale-[0.99]" id="installCronBtn" type="button">
+              Sync Crontab on VPS
+            </button>
+<button class="w-full h-8 px-3 rounded-[6px] font-mono text-xs bg-transparent hover:bg-[#141414] text-[#ededed] border border-[#333333] transition active:scale-[0.99]" id="copyCronBtn" type="button">
+              Copy Directive
+            </button>
+</div>
+</div>
+</div>
+</div>
+<!-- TAB 4: PRODUCTION BACKEND SOURCES (6) -->
+<div class="hidden space-y-4" id="tabContent-code">
+<div class="border border-[#1f1f1f] bg-[#0f0f0f] rounded-[8px] p-5">
+<div class="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-[#1f1f1f]">
+<div>
+<div class="flex items-center gap-2">
+<span class="sec-label">Production Sources</span>
+<span class="font-mono text-xs text-[#ededed]">~/omniroute-backup-manager</span>
+</div>
+<p class="text-xs text-[#9a9a9a] mt-0.5">Canonical Python engine, HTTP status daemon, systemd unit, and installation automation.</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="h-8 px-3 rounded-[6px] font-mono text-xs bg-transparent hover:bg-[#141414] text-[#ededed] border border-[#333333] transition" id="copySourceCodeBtn" type="button">
+              Copy Source
+            </button>
+<button class="h-8 px-3 rounded-[6px] font-mono text-xs bg-[#141414] hover:bg-[#1a1a1a] text-[#ededed] border border-[#1f1f1f] transition" id="downloadSourceFileBtn" type="button">
+              Download File
+            </button>
+</div>
+</div>
+<!-- File Tabs -->
+<div class="flex flex-wrap gap-1.5 mb-3" id="sourceFileTabButtons"></div>
+<!-- Code Viewer -->
+<div class="border border-[#1f1f1f] bg-[#0a0a0a] rounded-[6px] p-3.5 overflow-x-auto max-h-[540px] overflow-y-auto">
+<pre class="font-mono text-xs text-[#ededed] leading-relaxed select-all" id="sourceCodeViewer"></pre>
+</div>
+</div>
+</div>
+<!-- TAB 5: VPS RUNBOOK -->
+<div class="hidden space-y-6" id="tabContent-runbook">
+<div class="border border-[#1f1f1f] bg-[#0f0f0f] rounded-[8px] p-5 space-y-5">
+<div class="pb-3 border-b border-[#1f1f1f]">
+<span class="sec-label">Setup Runbook</span>
+<h2 class="text-sm font-semibold text-[#ededed] mt-1">Connecting Rclone to Google Drive (/omnirote) &amp; Daily Crontab</h2>
+<p class="text-xs text-[#9a9a9a] mt-0.5">Tested shell commands for unattended Linux VPS setup on <span class="font-mono text-[#ededed]" id="runbookHost">—</span>.</p>
+</div>
+<div class="space-y-4">
+<!-- Item 1 -->
+<div class="border border-[#1f1f1f] bg-[#0a0a0a] rounded-[6px] p-4">
+<div class="flex items-center justify-between mb-2">
+<span class="cap-num">01 INSTALL RCLONE ON HOST</span>
+<button class="copy-runbook-btn font-mono text-[11px] px-2 py-0.5 rounded-[5px] bg-[#141414] hover:bg-[#1a1a1a] text-[#ededed] border border-[#1f1f1f] transition" data-target="runbookStep1">Copy</button>
+</div>
+<pre class="font-mono text-xs text-[#ededed] bg-[#0f0f0f] border border-[#1f1f1f] p-3 rounded-[5px] overflow-x-auto leading-relaxed" id="runbookStep1">sudo apt-get update &amp;&amp; sudo apt-get install -y curl unzip python3 tar
+curl https://rclone.org/install.sh | sudo bash
+rclone version</pre>
+</div>
+<!-- Item 2 -->
+<div class="border border-[#1f1f1f] bg-[#0a0a0a] rounded-[6px] p-4">
+<div class="flex items-center justify-between mb-2">
+<span class="cap-num">02 CONFIGURE HEADLESS GDRIVE REMOTE</span>
+<button class="copy-runbook-btn font-mono text-[11px] px-2 py-0.5 rounded-[5px] bg-[#141414] hover:bg-[#1a1a1a] text-[#ededed] border border-[#1f1f1f] transition" data-target="runbookStep2">Copy</button>
+</div>
+<pre class="font-mono text-xs text-[#ededed] bg-[#0f0f0f] border border-[#1f1f1f] p-3 rounded-[5px] overflow-x-auto leading-relaxed" id="runbookStep2">rclone config
+# n -&gt; New remote -&gt; Name: gdrive
+# Storage -&gt; drive
+# scope -&gt; 1 (Full drive access)
+# Use web browser? -&gt; n (headless mode)
+# Paste returned authorization token from your browser.</pre>
+</div>
+<!-- Item 3 -->
+<div class="border border-[#1f1f1f] bg-[#0a0a0a] rounded-[6px] p-4">
+<div class="flex items-center justify-between mb-2">
+<span class="cap-num">03 VERIFY GDRIVE FOLDER PATH (/OMNIROTE)</span>
+<button class="copy-runbook-btn font-mono text-[11px] px-2 py-0.5 rounded-[5px] bg-[#141414] hover:bg-[#1a1a1a] text-[#ededed] border border-[#1f1f1f] transition" data-target="runbookStep3">Copy</button>
+</div>
+<pre class="font-mono text-xs text-[#ededed] bg-[#0f0f0f] border border-[#1f1f1f] p-3 rounded-[5px] overflow-x-auto leading-relaxed" id="runbookStep3">rclone mkdir gdrive:omnirote
+rclone lsd gdrive:
+rclone lsjson gdrive:omnirote</pre>
+</div>
+<!-- Item 4 -->
+<div class="border border-[#1f1f1f] bg-[#0a0a0a] rounded-[6px] p-4">
+<div class="flex items-center justify-between mb-2">
+<span class="cap-num">04 EXECUTE VERIFICATION BACKUP</span>
+<button class="copy-runbook-btn font-mono text-[11px] px-2 py-0.5 rounded-[5px] bg-[#141414] hover:bg-[#1a1a1a] text-[#ededed] border border-[#1f1f1f] transition" data-target="runbookStep4">Copy</button>
+</div>
+<pre class="font-mono text-xs text-[#ededed] bg-[#0f0f0f] border border-[#1f1f1f] p-3 rounded-[5px] overflow-x-auto leading-relaxed" id="runbookStep4">cd /home/saeed/omniroute-backup-manager
+chmod +x install.sh backup_engine.py
+./install.sh
+python3 backup_engine.py --run-now
+rclone ls gdrive:omnirote</pre>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- CHROME FOOTER (Hairline Divider) -->
+<footer class="border-t border-[#1f1f1f] px-5 sm:px-6 py-3 bg-[#0a0a0a] flex items-center justify-between font-mono text-[11px] text-[#9a9a9a]">
+<div class="flex items-center gap-3">
+<span class="text-[#ededed]" id="footerWordmark">omniroute engine</span>
+<span class="text-[#333333]">|</span>
+<span id="footerHost">—</span>
+<span class="text-[#333333]">|</span>
+<span id="footerPid">—</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-[#ededed]" id="footerCronDot"></span>
+<span id="footerCron">checking crontab…</span>
+</div>
+</footer>
+</div>
+<script>
+  // [fake source replica removed — real files fetched from /api/source]
+  // ── API layer ────────────────────────────────────────────────
+  async function api(path, opts = {}) {
+    const res = await fetch(path, Object.assign({ headers: { "Accept": "application/json" } }, opts));
+    let body = null;
+    try { body = await res.json(); } catch (e) { body = null; }
+    if (!res.ok) throw new Error((body && (body.error || body.message)) || `${res.status} ${res.statusText}`);
+    return body;
+  }
+  const apiGet = (p) => api(p);
+  const apiPost = (p, data) => api(p, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+    body: JSON.stringify(data || {})
+  });
+
+  // Whitelist keys served by /api/source; refreshed from its "files" list.
+  let SOURCE_KEYS = [
+    "backup_engine.py",
+    "app.py",
+    "config.json",
+    "install.sh",
+    "README.md",
+    "systemd/omniroute-dashboard.service"
+  ];
+
+  // ── App runtime state (all populated from the backend) ─────
+  const state = {
+    isRunning: false,
+    activeSourceFile: null,
+    sourceContent: {},
+    config: null,
+    overview: null,  // GET /api/status payload
+    history: [],     // GET /api/history rows
+    formFilled: false,
+    remote: null,   // GET /api/remote/files payload
+    ticker: null
+  };
+
+  function formatBytes(bytes) {
+    const n = Number(bytes) || 0;
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  function showToast(message) {
+    const stack = document.getElementById("toastStack");
+    const toast = document.createElement("div");
+    toast.className = "pointer-events-auto bg-[#0f0f0f] border border-[#1f1f1f] rounded-[6px] px-3.5 py-2.5 shadow-xl flex items-center gap-2.5 font-mono text-xs text-[#ededed]";
+    toast.innerHTML = `
+      <span class="w-1.5 h-1.5 rounded-full bg-[#ededed]"></span>
+      <span class="leading-tight">${message}</span>
+    `;
+    stack.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      toast.style.transition = "opacity 0.15s ease";
+      setTimeout(() => toast.remove(), 160);
+    }, 3200);
+  }
+
+  function appendTerminal(line, color = "text-[#ededed]", delay = 0) {
+    return new Promise(resolve => {
+      setTimeout(() => {
+        const stream = document.getElementById("terminalStream");
+        const cursorRow = document.getElementById("termCursorRow");
+        const div = document.createElement("div");
+        div.className = `leading-relaxed ${color}`;
+        div.textContent = line;
+        stream.insertBefore(div, cursorRow);
+        stream.scrollTop = stream.scrollHeight;
+        resolve();
+      }, delay);
+    });
+  }
+
+  function renderAuditTable() {
+    const tbody = document.getElementById("auditTableBody");
+    tbody.innerHTML = "";
+    const runs = state.history || [];
+    document.getElementById("auditCountBadge").textContent =
+      `${runs.length} record${runs.length === 1 ? "" : "s"}`;
+
+    if (!runs.length) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td colspan="5" class="py-3 font-mono text-[11px] text-[#9a9a9a]">No backup runs recorded yet — trigger "Run Backup Now".</td>`;
+      tbody.appendChild(tr);
+      return;
+    }
+
+    runs.forEach((run) => {
+      const purged = Number(run.local_deleted) === 1 && run.status === "success";
+      const failed = run.status === "failed";
+      const running = run.status === "running";
+
+      const purgeBadge = purged
+        ? `<span class="font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] bg-[#141414] text-[#ededed] border border-[#1f1f1f]">Purged</span>`
+        : `<span class="font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] bg-[#141414] text-[#9a9a9a] border border-[#1f1f1f]">Retained</span>`;
+
+      let driveBadge;
+      if (failed) {
+        driveBadge = `<span title="${esc(run.error_message || "backup failed")}" class="font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] bg-[#3a1f1d] text-[#e0726a] border border-[#4a2a27]">FAILED</span>`;
+      } else if (running) {
+        driveBadge = `<span class="inline-flex items-center gap-1 font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] bg-[#141414] text-[#ededed] border border-[#1f1f1f]"><span class="w-1.5 h-1.5 rounded-full bg-[#ededed] dot-pulse"></span>RUNNING</span>`;
+      } else if (Number(run.remote_verified) === 1) {
+        driveBadge = `<span class="font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] bg-[#ededed] text-[#0a0a0a] font-medium">VERIFIED</span>`;
+      } else {
+        driveBadge = `<span class="font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] bg-[#141414] text-[#9a9a9a] border border-[#1f1f1f]">UPLOADED</span>`;
+      }
+
+      const tr = document.createElement("tr");
+      tr.className = "hover:bg-[#141414] transition-colors";
+      tr.innerHTML = `
+        <td class="py-2.5 pr-3 font-mono text-[#ededed] font-medium">${esc(run.archive_name)}</td>
+        <td class="py-2.5 px-2 font-mono text-[#9a9a9a]">${esc(fmtWhen(run.started_at))} <span class="text-[#666666]">(${esc(run.trigger_type)})</span>${running ? "" : ` <span class="text-[#666666]">${esc(fmtDur(run.duration_seconds))}</span>`}</td>
+        <td class="py-2.5 px-2 text-right font-mono text-[#ededed]">${formatBytes(run.archive_size_bytes)}</td>
+        <td class="py-2.5 px-2 text-center">${purgeBadge}</td>
+        <td class="py-2.5 pl-2 text-right">${driveBadge}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderRemoteExplorer() {
+    const tbody = document.getElementById("remoteExplorerTableBody");
+    tbody.innerHTML = "";
+    const remote = state.remote;
+    const cfg = state.config || {};
+    const spec = (remote && remote.remote_spec) || `${cfg.rclone_remote || "?"}:${cfg.drive_folder || "?"}`;
+    document.getElementById("remoteSpecChip").textContent = spec;
+    document.getElementById("tabRemoteLabel").textContent = `Remote Storage (${spec})`;
+    const hint = document.getElementById("remoteTabHint");
+    if (hint) hint.textContent = `rclone lsjson ${spec}`;
+
+    const files = (remote && remote.files) || [];
+    if (!files.length) {
+      const msg = remote && remote.ok === false
+        ? `remote unavailable — ${remote.error || "rclone listing failed"}`
+        : `no archives found in ${spec} yet`;
+      tbody.innerHTML = `<tr><td colspan="6" class="py-3 font-mono text-[11px] text-[#9a9a9a]">${esc(msg)}</td></tr>`;
+      return;
+    }
+
+    const shaFor = (name) => {
+      const match = (state.history || []).find(r => r.archive_name === name && r.sha256);
+      return match ? `${String(match.sha256).slice(0, 24)}...` : "—";
+    };
+
+    files.forEach((file) => {
+      const tr = document.createElement("tr");
+      tr.className = "hover:bg-[#141414] transition-colors";
+      tr.innerHTML = `
+        <td class="py-2.5 pr-4 font-mono font-medium text-[#ededed]">${esc(file.name)}</td>
+        <td class="py-2.5 px-4 font-mono text-[#9a9a9a]">${esc(spec)}/${esc(file.name)}</td>
+        <td class="py-2.5 px-4 font-mono text-[#9a9a9a]">${esc(fmtWhen(file.mod_time))}</td>
+        <td class="py-2.5 px-4 text-right font-mono text-[#ededed]">${formatBytes(file.size)}</td>
+        <td class="py-2.5 px-4 font-mono text-[#9a9a9a] text-[11px]">${esc(shaFor(file.name))}</td>
+        <td class="py-2.5 pl-4 text-right">
+          <button data-archive="${esc(file.name)}" class="btn-restore-guide h-7 px-2.5 rounded-[5px] bg-transparent hover:bg-[#1a1a1a] text-[#ededed] border border-[#333333] text-[11px] font-mono transition">
+            Restore
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderSourceFiles() {
+    const bar = document.getElementById("sourceFileTabButtons");
+    bar.innerHTML = "";
+    if (SOURCE_KEYS.length && !state.activeSourceFile) state.activeSourceFile = SOURCE_KEYS[0];
+
+    SOURCE_KEYS.forEach((fileName) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      const isActive = state.activeSourceFile === fileName;
+      btn.className = isActive
+        ? "h-7 px-2.5 rounded-[5px] text-[11px] font-mono font-medium bg-[#ededed] text-[#0a0a0a] transition"
+        : "h-7 px-2.5 rounded-[5px] text-[11px] font-mono font-medium bg-transparent hover:bg-[#141414] text-[#9a9a9a] border border-[#1f1f1f] transition";
+      btn.textContent = fileName;
+      btn.onclick = () => {
+        state.activeSourceFile = fileName;
+        renderSourceFiles();
+        loadSourceFile(fileName);
+      };
+      bar.appendChild(btn);
+    });
+
+    const viewer = document.getElementById("sourceCodeViewer");
+    const cached = state.sourceContent[state.activeSourceFile];
+    viewer.textContent = cached != null
+      ? cached
+      : `// fetching ${state.activeSourceFile} from /api/source ...`;
+
+    const label = document.getElementById("tabSourceLabel");
+    if (state.activeSourceFile) {
+      label.textContent = `Source · ${state.activeSourceFile.split("/").pop()}`;
+    }
+  }
+
+  async function loadSourceFile(key) {
+    if (!key || state.sourceContent[key] != null) return;
+    try {
+      const body = await apiGet(`/api/source?name=${encodeURIComponent(key)}`);
+      if (Array.isArray(body.files) && body.files.length) SOURCE_KEYS = body.files;
+      state.sourceContent[key] = body.content != null ? body.content : "";
+    } catch (err) {
+      state.sourceContent[key] = `// failed to fetch ${key}\n// ${err.message}`;
+    }
+    if (state.activeSourceFile === key) renderSourceFiles();
+  }
+
+  // ── formatting helpers ────────────────────────────
+  function esc(value) {
+    return String(value == null ? "" : value).replace(/[&<>"]/g, (ch) =>
+      "\u0026#" + ch.charCodeAt(0) + ";"
+    );
+  }
+
+  function fmtWhen(iso) {
+    if (!iso) return "—";
+    return String(iso).replace("T", " ").replace(/\.\d+Z?$/, "").slice(0, 19);
+  }
+
+  function fmtDur(seconds) {
+    const n = Number(seconds);
+    if (!isFinite(n) || n <= 0) return "";
+    return n.toFixed(1) + "s";
+  }
+
+  function nextCronText(hour, minute) {
+    const now = new Date();
+    const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0, 0);
+    if (next <= now) next.setDate(next.getDate() + 1);
+    let diff = Math.max(0, Math.floor((next - now) / 1000));
+    const days = Math.floor(diff / 86400);
+    diff -= days * 86400;
+    const hours = Math.floor(diff / 3600);
+    const mins = Math.floor((diff - hours * 3600) / 60);
+    const parts = [];
+    if (days) parts.push(days + "d");
+    if (days || hours) parts.push(hours + "h");
+    parts.push(mins + "m");
+    return "in " + parts.join(" ");
+  }
+
+  function tstamp() {
+    return new Date().toTimeString().slice(0, 8);
+  }
+
+  const pad2 = (n) => String(n).padStart(2, "0");
+
+  // ── status-driven UI (header / KPIs / footer / labels) ──
+  function renderStatus() {
+    const ov = state.overview;
+    if (!ov) return;
+    const cfg = ov.config || {};
+    const cron = ov.cron || {};
+    const src = ov.source_stats || {};
+
+    // Header live context
+    const dot = document.getElementById("headerStatusDot");
+    dot.className = ov.ok === false
+      ? "inline-block w-1.5 h-1.5 rounded-full bg-[#e0726a] dot-pulse"
+      : "inline-block w-1.5 h-1.5 rounded-full bg-[#ededed] dot-pulse";
+    document.getElementById("headerContextHost").textContent = ov.hostname || "—";
+    const sep1 = document.getElementById("headerContextSep1");
+    const hsrc = document.getElementById("headerContextSource");
+    sep1.style.display = "inline";
+    hsrc.style.display = "inline";
+    hsrc.textContent = cfg.source_dir || "—";
+    if (cfg.rclone_remote) {
+      document.getElementById("headerContextSep2").style.display = "inline";
+      const hrem = document.getElementById("headerContextRemote");
+      hrem.style.display = "inline";
+      hrem.textContent = `${cfg.rclone_remote}:${cfg.drive_folder}`;
+    }
+
+    // KPI 1 — VPS source
+    document.getElementById("kpiSourceBadge").textContent = src.exists ? "ONLINE" : "MISSING";
+    document.getElementById("kpiSourceDir").textContent = cfg.source_dir || "—";
+    document.getElementById("kpiSourceMeta").textContent = `${src.file_count || 0} files staged`;
+    document.getElementById("kpiSourceBytes").textContent = formatBytes(src.total_bytes || 0);
+
+    // KPI 2 — active target
+    document.getElementById("kpiTargetBadge").textContent = ov.rclone_installed ? "DAILY" : "NO RCLONE";
+    document.getElementById("kpiArchiveLabel").textContent = ov.today_archive_name || "—";
+    document.getElementById("kpiTargetMeta").textContent =
+      `${formatBytes(ov.disk_free_bytes)} free of ${formatBytes(ov.disk_total_bytes)}`;
+
+    // KPI 3 — remote destination
+    document.getElementById("kpiRemoteSpec").textContent = `${cfg.rclone_remote}:${cfg.drive_folder}`;
+    document.getElementById("kpiRemoteCount").textContent =
+      `${(ov.configured_remotes || []).length} remote(s)`;
+    document.getElementById("kpiRemoteBytes").textContent =
+      `${(state.remote && state.remote.files ? state.remote.files.length : 0)} archives`;
+
+    // KPI 4 — cron trigger
+    document.getElementById("kpiCronState").textContent = cron.installed ? "ARMED" : "UNARMED";
+    document.getElementById("kpiCronLine").textContent = cron.installed
+      ? `${cfg.cron_hour}:${pad2(cfg.cron_minute)} UTC, daily`
+      : "no crontab entry";
+    document.getElementById("kpiCronMeta").textContent = cron.crontab_available
+      ? "via system crontab"
+      : "crontab unavailable";
+    document.getElementById("kpiCronNext").textContent =
+      nextCronText(Number(cfg.cron_hour) || 0, Number(cfg.cron_minute) || 0);
+
+    // Terminal chrome
+    document.getElementById("termHostLabel").textContent = ov.hostname || "—";
+    document.getElementById("termHostShell").textContent =
+      `${cfg.vps_user || "user"}@${ov.hostname || "host"}`;
+    document.getElementById("modalHost").textContent = `${cfg.vps_user}@${cfg.vps_host}`;
+
+    // Footer
+    document.getElementById("footerHost").textContent = ov.hostname || "—";
+    document.getElementById("footerPid").textContent = ov.server_pid ? `pid ${ov.server_pid}` : "—";
+    document.getElementById("footerCronDot").className = cron.installed
+      ? "w-1.5 h-1.5 rounded-full bg-[#ededed]"
+      : "w-1.5 h-1.5 rounded-full bg-[#e0726a]";
+    document.getElementById("footerCron").textContent = cron.installed
+      ? "cron armed"
+      : (cron.crontab_available ? "cron not installed" : "crontab unavailable");
+
+    const rh = document.getElementById("runbookHost");
+    if (rh) rh.textContent = `${cfg.vps_user}@${cfg.vps_host}`;
+
+    // Status summary line under Schedule tab
+    const ct = document.getElementById("cronTitle");
+    if (ct) {
+      ct.textContent = cron.installed
+        ? `Daily trigger armed for ${cfg.cron_hour}:${pad2(cfg.cron_minute)} UTC`
+        : `Not scheduled — sync crontab at ${cfg.cron_hour}:${pad2(cfg.cron_minute)} UTC`;
+    }
+
+    renderStatusChip();
+  }
+
+  function renderStatusChip() {
+    // rclone verify button inline state
+    const ov = state.overview;
+    if (!ov) return;
+    const dot = document.getElementById("verifyStatusDot");
+    dot.className = ov.rclone_installed
+      ? "inline-block w-1.5 h-1.5 rounded-full bg-[#ededed]"
+      : "inline-block w-1.5 h-1.5 rounded-full bg-[#e0726a]";
+  }
+
+  // ── config-driven UI (form / step commands / cron box) ──
+  function updateConfigUI() {
+    const ov = state.overview;
+    const cfg = state.config;
+    if (!cfg) return;
+
+    // Fill the form only once, so in-progress edits are not clobbered by polling.
+    if (!state.formFilled) {
+      document.getElementById("cfgVpsHost").value = `${cfg.vps_user}@${cfg.vps_host}`;
+      document.getElementById("cfgSourceDir").value = cfg.source_dir || "";
+      document.getElementById("cfgStagingDir").value = cfg.staging_dir || "";
+      document.getElementById("cfgRemoteName").value = cfg.rclone_remote || "";
+      document.getElementById("cfgDriveFolder").value = cfg.drive_folder || "";
+      document.getElementById("cfgCronHour").value = Number(cfg.cron_hour) || 0;
+      document.getElementById("cfgCronMin").value = Number(cfg.cron_minute) || 0;
+      document.getElementById("cfgAutoPurgeLocal").checked = !!cfg.delete_local_after_upload;
+      state.formFilled = true;
+    }
+
+    const archive = (ov && ov.today_archive_name) || "—";
+    const spec = `${cfg.rclone_remote}:${cfg.drive_folder}`;
+    const srcParent = (cfg.source_dir || "/tmp/source").split("/").filter(Boolean).slice(0, -1).join("/") || "/";
+
+    // Pipeline step commands reflect the real engine behaviour
+    document.getElementById("stepCmd1").textContent = `tar -czf ${cfg.staging_dir}/${archive} -C ${srcParent} .`;
+    document.getElementById("stepCmd2").textContent = `rclone copyto ${cfg.staging_dir}/${archive} ${spec}/`;
+    document.getElementById("stepCmd3").textContent = `rclone lsjson ${spec}/${archive}`;
+    document.getElementById("stepCmd4").textContent = cfg.delete_local_after_upload
+      ? `os.unlink('${cfg.staging_dir}/${archive}')`
+      : "auto-purge disabled (kept on VPS)";
+
+    // Schedule summaries
+    const cron = ov ? ov.cron : {};
+    document.getElementById("cronSummaryMin").textContent =
+      `${pad2(cfg.cron_hour)}:${pad2(cfg.cron_minute)} UTC`;
+    document.getElementById("cronSummaryArchive").textContent = archive;
+    document.getElementById("cronSummaryDest").textContent = spec;
+
+    // Raw crontab directive (real expected/current line from the backend)
+    const line = (cron && (cron.current_line || cron.expected_line)) || `${cfg.cron_minute} ${cfg.cron_hour} * * * <python> backup_engine.py --run-now`;
+    document.getElementById("crontabRenderedLine").textContent = line;
+
+    // Keep mirror of remote labels consistent
+    renderRemoteExplorer();
+    renderStatus();
+  }
+
+  // ── data refreshers ─────────────────────────────
+  async function refreshStatus() {
+    try {
+      const body = await apiGet("/api/status");
+      // the API nests the overview under `data` — flatten it for the template layer
+      const ov = (body && body.data) ? body.data : body;
+      ov.ok = !body || body.ok !== false;
+      state.overview = ov;
+      if (ov.config) state.config = ov.config;
+      renderStatus();
+      updateConfigUI();
+    } catch (err) {
+      const dot = document.getElementById("headerStatusDot");
+      dot.className = "inline-block w-1.5 h-1.5 rounded-full bg-[#e0726a] dot-pulse";
+      document.getElementById("headerContextHost").textContent = "backend unreachable";
+      document.getElementById("footerCron").textContent = "offline";
+      console.error("status refresh failed:", err);
+    }
+  }
+
+  async function refreshHistory() {
+    try {
+      const body = await apiGet("/api/history");
+      state.history = Array.isArray(body.history) ? body.history : [];
+    } catch (err) {
+      console.error("history refresh failed:", err);
+    }
+    renderAuditTable();
+    if (state.remote) renderRemoteExplorer();
+  }
+
+  async function refreshRemote() {
+    try {
+      state.remote = await apiGet("/api/remote/files");
+    } catch (err) {
+      state.remote = { ok: false, files: [], error: err.message };
+    }
+    renderRemoteExplorer();
+  }
+
+  function openRestoreModal(archiveName) {
+    const cfg = state.config || {};
+    const spec = (state.remote && state.remote.remote_spec) || `${cfg.rclone_remote}:${cfg.drive_folder}`;
+    const remote = `${spec}/${archiveName}`;
+    const staging = cfg.staging_dir || "/tmp";
+    // backup_engine packs with arcname = basename(source_dir), so restoring into the
+    // parent directory of source_dir recreates it exactly.
+    const srcParent = (cfg.source_dir || "/home/user/.data").split("/").filter(Boolean).slice(0, -1).join("/") || "/";
+
+    document.getElementById("modalArchiveName").textContent = archiveName;
+    document.getElementById("modalHost").textContent = `${cfg.vps_user}@${cfg.vps_host}`;
+    document.getElementById("modalNoteExtract").textContent = `Unpacks to ${cfg.source_dir}`;
+    document.getElementById("modalRestoreScript").textContent =
+`# 1. Fetch remote archive snapshot:
+rclone copyto ${remote} ${staging}/${archiveName} --progress
+
+# 2. Extract into ${cfg.source_dir}:
+tar -xzf ${staging}/${archiveName} -C ${srcParent}
+
+# 3. Clean temporary download:
+rm -f ${staging}/${archiveName}`;
+
+    const modal = document.getElementById("restoreModal");
+    const card = document.getElementById("restoreModalCard");
+    modal.classList.remove("hidden", "pointer-events-none");
+    modal.classList.add("flex");
+    requestAnimationFrame(() => {
+      modal.classList.remove("opacity-0");
+      modal.classList.add("opacity-100");
+      card.classList.remove("scale-[0.98]");
+      card.classList.add("scale-100");
+    });
+  }
+
+  function closeRestoreModal() {
+    const modal = document.getElementById("restoreModal");
+    const card = document.getElementById("restoreModalCard");
+    modal.classList.remove("opacity-100");
+    modal.classList.add("opacity-0");
+    card.classList.remove("scale-100");
+    card.classList.add("scale-[0.98]");
+    setTimeout(() => {
+      modal.classList.add("hidden", "pointer-events-none");
+      modal.classList.remove("flex");
+    }, 150);
+  }
+
+  // ── REAL BACKUP EXECUTION (POST /api/backup/run) ────────────
+  const STEP_BADGE = {
+    RUNNING: "font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] bg-[#ededed] text-[#0a0a0a] font-medium",
+    DONE: "font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] bg-[#141414] text-[#ededed] border border-[#1f1f1f]",
+    FAILED: "font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] bg-[#3a1f1d] text-[#e0726a] border border-[#4a2a27]",
+    OFF: "font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] bg-[#141414] text-[#666666] border border-[#1f1f1f]",
+    READY: "font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] bg-[#141414] text-[#9a9a9a] border border-[#1f1f1f]"
+  };
+
+  function setStep(num, status) {
+    const card = document.getElementById(`stepCard${num}`);
+    const badge = document.getElementById(`stepBadge${num}`);
+    card.classList.toggle("border-[#e0726a]", status === "FAILED");
+    card.classList.toggle("border-[#ededed]", status === "RUNNING");
+    badge.className = STEP_BADGE[status] || STEP_BADGE.READY;
+    badge.textContent = status;
+  }
+
+  function resetSteps() {
+    for (let i = 1; i <= 4; i++) setStep(i, "READY");
+  }
+
+  // Derive per-step states from a real run row (step_log + status columns).
+  function deriveSteps(run) {
+    const ok = run.status === "success";
+    const d4 = Number(run.local_deleted) === 1;
+    if (ok) {
+      setStep(1, "DONE");
+      setStep(2, "DONE");
+      setStep(3, "DONE");
+      setStep(4, d4 ? "DONE" : "OFF");
+      return;
+    }
+    const log = String(run.step_log || "").toLowerCase();
+    const seq = [
+      log.includes("compression complete") || Number(run.archive_size_bytes) > 0,
+      log.includes("verif"), // verification only starts once upload finished
+      Number(run.remote_verified) === 1,
+      d4
+    ];
+    let marked = false;
+    for (let i = 1; i <= 4; i++) {
+      if (seq[i - 1]) setStep(i, "DONE");
+      else if (!marked && run.status === "failed") { setStep(i, "FAILED"); marked = true; }
+      else setStep(i, "READY");
+    }
+  }
+
+  async function runBackupPipeline() {
+    if (state.isRunning) return;
+    state.isRunning = true;
+
+    const btn = document.getElementById("runBackupBtn");
+    const btnLabel = document.getElementById("backupBtnLabel");
+    const btnSpinner = document.getElementById("runBtnSpinner");
+    const overallBadge = document.getElementById("pipelineOverallStatus");
+    const pBar = document.getElementById("pipelineProgressBar");
+    const pLabel = document.getElementById("pipelineProgressStepLabel");
+    const pEta = document.getElementById("pipelineProgressEta");
+    const speedGauge = document.getElementById("speedGauge");
+    const byteGauge = document.getElementById("byteCountGauge");
+
+    btn.disabled = true;
+    btn.classList.add("opacity-60", "cursor-not-allowed");
+    btnLabel.textContent = "Running...";
+    btnSpinner.classList.remove("hidden");
+
+    resetSteps();
+    overallBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-[#ededed] dot-pulse"></span><span>EXECUTING</span>`;
+    pLabel.textContent = "backend executing backup_engine.py ...";
+    pEta.textContent = "ETA: running";
+    pBar.className = "h-full active-stripe transition-all duration-200";
+    pBar.style.width = "100%";
+    speedGauge.textContent = "—";
+    byteGauge.textContent = "—";
+
+    const t0 = Date.now();
+    state.ticker = setInterval(() => {
+      const s = Math.round((Date.now() - t0) / 1000);
+      pLabel.textContent = `backend executing backup_engine.py • elapsed ${s}s`;
+    }, 1000);
+
+    await appendTerminal(`[${tstamp()}] POST /api/backup/run (trigger=manual-ui)`, "text-[#9a9a9a]");
+
+    let run = null;
+    let failure = null;
+    try {
+      const body = await apiPost("/api/backup/run", { trigger: "manual-ui" });
+      run = body.run || null;
+      if (!run || run.status !== "success") {
+        failure = (run && run.error_message) || body.error || "backup run reported failure";
+      }
+    } catch (err) {
+      failure = err.message;
+    }
+
+    if (state.ticker) { clearInterval(state.ticker); state.ticker = null; }
+
+    // Replay the REAL engine step log into the console
+    if (run && run.step_log) {
+      const lines = String(run.step_log).split("\n").filter(Boolean);
+      for (const line of lines) {
+        const clean = line.replace(/\u001b\[[0-9;]*m/g, "");
+        await appendTerminal(`[${tstamp()}] ${clean}`, /error/i.test(clean) ? "text-[#e0726a]" : "text-[#ededed]", 45);
+      }
+    } else if (failure) {
+      await appendTerminal(`[${tstamp()}] ERROR: ${failure}`, "text-[#e0726a]");
+    }
+
+    pBar.classList.remove("active-stripe");
+    pBar.classList.add("bg-[#ffffff]");
+    pBar.style.width = "100%";
+    const elapsed = Math.max(0.1, (Date.now() - t0) / 1000);
+
+    if (!failure && run) {
+      deriveSteps(run);
+      const bytes = Number(run.archive_size_bytes) || 0;
+      const dur = Number(run.duration_seconds) || Number(elapsed.toFixed(1));
+      const mb = bytes / (1024 * 1024);
+      const mbps = mb / Math.max(dur, 0.1);
+      speedGauge.textContent = `${mbps.toFixed(1)} MB/s`;
+      byteGauge.textContent = run.sha256
+        ? `${formatBytes(bytes)} • sha ${String(run.sha256).slice(0, 12)}`
+        : formatBytes(bytes);
+      pLabel.textContent = `100% • ${run.archive_name} — completed in ${dur.toFixed(1)}s`;
+      pEta.textContent = `ETA: done in ${fmtDur(dur)}`;
+      overallBadge.innerHTML = Number(run.remote_verified) === 1
+        ? `<span class="w-1.5 h-1.5 rounded-full bg-[#ededed]"></span><span>VERIFIED</span>`
+        : `<span class="w-1.5 h-1.5 rounded-full bg-[#ededed]"></span><span>COMPLETE</span>`;
+      await appendTerminal(
+        `[${tstamp()}] run #${run.id} ${run.status} — remote_verified=${run.remote_verified} local_purged=${run.local_deleted}`,
+        "text-[#ededed] font-medium"
+      );
+      showToast(`Snapshot uploaded: ${run.archive_name}`);
+    } else {
+      if (run) deriveSteps(run);
+      else resetSteps();
+      pLabel.textContent = `backup failed • ${failure}`;
+      pEta.textContent = "ETA: —";
+      speedGauge.textContent = "—";
+      byteGauge.textContent = "—";
+      overallBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-[#e0726a]"></span><span>FAILED</span>`;
+      showToast(`Backup failed: ${failure}`);
+    }
+
+    btn.disabled = false;
+    btn.classList.remove("opacity-60", "cursor-not-allowed");
+    btnLabel.textContent = "Run Backup Now";
+    btnSpinner.classList.add("hidden");
+    state.isRunning = false;
+
+    await Promise.all([refreshHistory(), refreshRemote(), refreshStatus()]);
+  }
+
+  // EVENT BINDINGS
+  document.addEventListener("DOMContentLoaded", () => {
+    // Tab Navigation (Geist line tabs)
+    document.querySelectorAll(".tab-pill").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tab = btn.getAttribute("data-tab");
+        document.querySelectorAll(".tab-pill").forEach(b => {
+          b.className = "tab-pill flex items-center gap-2 py-2.5 px-3 font-mono text-xs font-medium border-b-2 border-transparent text-[#9a9a9a] hover:text-[#ededed] whitespace-nowrap transition-colors";
+        });
+
+        btn.className = "tab-pill active flex items-center gap-2 py-2.5 px-3 font-mono text-xs font-medium border-b-2 border-[#ededed] text-[#ededed] whitespace-nowrap transition-colors";
+
+        ["pipeline", "remote", "config", "code", "runbook"].forEach(t => {
+          const content = document.getElementById(`tabContent-${t}`);
+          if (content) {
+            if (t === tab) content.classList.remove("hidden");
+            else content.classList.add("hidden");
+          }
+        });
+      });
+    });
+
+    // Render initial empty states
+    renderAuditTable();
+    renderRemoteExplorer();
+    renderSourceFiles();
+
+    // Run Backup
+    document.getElementById("runBackupBtn").addEventListener("click", runBackupPipeline);
+
+    // Verify rclone → POST /api/rclone/test
+    document.getElementById("verifyRcloneBtn").addEventListener("click", async () => {
+      const btn = document.getElementById("verifyRcloneBtn");
+      const dot = document.getElementById("verifyStatusDot");
+      btn.disabled = true;
+      dot.className = "inline-block w-1.5 h-1.5 rounded-full bg-[#ededed] dot-pulse";
+      appendTerminal(`[${tstamp()}] POST /api/rclone/test`, "text-[#9a9a9a]");
+      try {
+        const res = await apiPost("/api/rclone/test", {});
+        if (res.ok) {
+          const remotes = (res.configured_remotes || []).join(", ") || "none";
+          await appendTerminal(`[${tstamp()}] ${res.rclone_version || "rclone"} — remotes: ${remotes}`, "text-[#ededed]");
+          await appendTerminal(`[${tstamp()}] destination ${res.remote_folder_spec} is reachable`, "text-[#ededed]");
+          showToast(`Remote verified: ${res.remote_folder_spec}`);
+        } else {
+          await appendTerminal(`[${tstamp()}] rclone check failed: ${res.error}`, "text-[#e0726a]");
+          showToast(`rclone check failed${res.error ? ": " + res.error : ""}`);
+        }
+        if (state.overview) {
+          state.overview.rclone_installed = !!res.rclone_installed;
+          state.overview.rclone_version = res.rclone_version || "";
+          state.overview.configured_remotes = res.configured_remotes || [];
+        }
+        renderStatus();
+      } catch (err) {
+        await appendTerminal(`[${tstamp()}] rclone check error: ${err.message}`, "text-[#e0726a]");
+        showToast("rclone check failed");
+      } finally {
+        btn.disabled = false;
+        renderStatusChip();
+      }
+    });
+
+    // Terminal Controls
+    document.getElementById("clearTermBtn").addEventListener("click", () => {
+      const stream = document.getElementById("terminalStream");
+      const cursorRow = document.getElementById("termCursorRow");
+      Array.from(stream.children).forEach(child => {
+        if (child !== cursorRow) child.remove();
+      });
+      appendTerminal("[buffer cleared]", "text-[#9a9a9a]");
+    });
+
+    // Tail real log lines → GET /api/logs
+    document.getElementById("tailLogsBtn").addEventListener("click", async () => {
+      appendTerminal(`[${tstamp()}] tail -n 20 logs/backup.log`, "text-[#9a9a9a]");
+      try {
+        const body = await apiGet("/api/logs");
+        const lines = String(body.log || "").split("\n").filter(l => l.trim()).slice(-20);
+        for (const line of lines) {
+          await appendTerminal(line, /error|failed/i.test(line) ? "text-[#e0726a]" : "text-[#9a9a9a]", 30);
+        }
+        showToast(`Tailed ${lines.length} log lines`);
+      } catch (err) {
+        await appendTerminal(`[${tstamp()}] log tail failed: ${err.message}`, "text-[#e0726a]");
+      }
+    });
+
+    // Remote Table Restore Buttons
+    document.getElementById("remoteExplorerTableBody").addEventListener("click", (e) => {
+      const btn = e.target.closest(".btn-restore-guide");
+      if (btn) {
+        const archive = btn.getAttribute("data-archive");
+        openRestoreModal(archive);
+      }
+    });
+
+    // Modal Close
+    document.getElementById("closeModalBtn").onclick = closeRestoreModal;
+    document.getElementById("closeModalBottomBtn").onclick = closeRestoreModal;
+    document.getElementById("restoreModal").addEventListener("click", (e) => {
+      if (e.target === document.getElementById("restoreModal")) closeRestoreModal();
+    });
+
+    // Copy Restore Script
+    document.getElementById("copyModalBtn").onclick = () => {
+      const text = document.getElementById("modalRestoreScript").textContent;
+      navigator.clipboard.writeText(text);
+      showToast("CLI commands copied");
+    };
+
+    // Config form submission → POST /api/config (full document)
+    document.getElementById("configParametersForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!state.config) return;
+      const full = Object.assign({}, state.config);
+
+      const hostRaw = document.getElementById("cfgVpsHost").value.trim();
+      const at = hostRaw.indexOf("@");
+      if (at > 0) {
+        full.vps_user = hostRaw.slice(0, at);
+        full.vps_host = hostRaw.slice(at + 1);
+      } else if (hostRaw) {
+        full.vps_host = hostRaw;
+      }
+      full.source_dir = document.getElementById("cfgSourceDir").value.trim();
+      full.staging_dir = document.getElementById("cfgStagingDir").value.trim();
+      full.rclone_remote = document.getElementById("cfgRemoteName").value.trim();
+      full.drive_folder = document.getElementById("cfgDriveFolder").value.trim();
+      full.cron_hour = parseInt(document.getElementById("cfgCronHour").value || "0", 10);
+      full.cron_minute = parseInt(document.getElementById("cfgCronMin").value || "1", 10);
+      full.delete_local_after_upload = document.getElementById("cfgAutoPurgeLocal").checked;
+
+      try {
+        const body = await apiPost("/api/config", full);
+        state.config = body.config;
+        if (state.overview) state.overview.config = body.config;
+        state.formFilled = false;
+        updateConfigUI();
+        if (body.cron_preview) {
+          await appendTerminal(`[${tstamp()}] config saved — cron preview: ${body.cron_preview}`, "text-[#ededed]");
+        }
+        showToast("Configuration saved to config.json");
+        await refreshStatus();
+      } catch (err) {
+        await appendTerminal(`[${tstamp()}] config save failed: ${err.message}`, "text-[#e0726a]");
+        showToast(`Config save failed: ${err.message}`);
+      }
+    });
+
+    // Quick Folder Buttons (apply on save)
+    document.getElementById("btnQuickOmnirote").onclick = () => {
+      document.getElementById("cfgDriveFolder").value = "omnirote";
+      showToast("Target folder set to omnirote — Save to apply");
+    };
+    document.getElementById("btnQuickOmniroute").onclick = () => {
+      document.getElementById("cfgDriveFolder").value = "omniroute";
+      showToast("Target folder set to omniroute — Save to apply");
+    };
+
+    // Crontab buttons → POST /api/cron/sync
+    document.getElementById("installCronBtn").onclick = async (ev) => {
+      const btn = ev.currentTarget;
+      btn.disabled = true;
+      appendTerminal(`[${tstamp()}] POST /api/cron/sync`, "text-[#9a9a9a]");
+      try {
+        const res = await apiPost("/api/cron/sync", {});
+        if (res.ok) {
+          await appendTerminal(`[${tstamp()}] crontab written — ${res.cron_line}`, "text-[#ededed]");
+          showToast("Crontab synchronized");
+        } else {
+          await appendTerminal(`[${tstamp()}] crontab sync failed: ${res.error}`, "text-[#e0726a]");
+          showToast(`Crontab sync failed: ${res.error}`);
+        }
+      } catch (err) {
+        await appendTerminal(`[${tstamp()}] crontab sync error: ${err.message}`, "text-[#e0726a]");
+      } finally {
+        btn.disabled = false;
+        await refreshStatus();
+      }
+    };
+    document.getElementById("copyCronBtn").onclick = () => {
+      const text = document.getElementById("crontabRenderedLine").textContent;
+      navigator.clipboard.writeText(text);
+      showToast("Crontab directive copied");
+    };
+
+    // Source Code buttons (content comes from /api/source)
+    document.getElementById("copySourceCodeBtn").onclick = async () => {
+      const key = state.activeSourceFile;
+      if (!key) return;
+      await loadSourceFile(key);
+      navigator.clipboard.writeText(state.sourceContent[key] || "");
+      showToast(`Copied ${key}`);
+    };
+
+    document.getElementById("downloadSourceFileBtn").onclick = async () => {
+      const key = state.activeSourceFile;
+      if (!key) return;
+      await loadSourceFile(key);
+      const blob = new Blob([state.sourceContent[key] || ""], { type: "text/plain" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = key.split("/").pop();
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast(`Downloaded ${key}`);
+    };
+
+    // Runbook copy buttons
+    document.querySelectorAll(".copy-runbook-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const targetId = btn.getAttribute("data-target");
+        const el = document.getElementById(targetId);
+        if (el) {
+          navigator.clipboard.writeText(el.textContent);
+          showToast("Command copied");
+        }
+      });
+    });
+
+    // ── BOOT: load everything from the backend ──────────────
+    (async () => {
+      appendTerminal(`[${tstamp()}] dashboard booting — GET /api/status`, "text-[#9a9a9a]");
+      await Promise.all([refreshStatus(), refreshHistory(), refreshRemote()]);
+      renderSourceFiles();
+      if (state.activeSourceFile) loadSourceFile(state.activeSourceFile);
+
+      const ov = state.overview;
+      if (ov) {
+        await appendTerminal(
+          `[${tstamp()}] connected — ${ov.hostname} (pid ${ov.server_pid}, port ${ov.server_port})`,
+          "text-[#ededed] font-medium"
+        );
+        const cron = ov.cron || {};
+        await appendTerminal(
+          cron.installed
+            ? `[${tstamp()}] crontab installed: ${cron.current_line}`
+            : `[${tstamp()}] crontab NOT installed — use "Sync Crontab on VPS"`,
+          cron.installed ? "text-[#9a9a9a]" : "text-[#e0726a]"
+        );
+        appendTerminal(`[${tstamp()}] source ${ov.config.source_dir} — ${(ov.source_stats || {}).file_count || 0} files`, "text-[#9a9a9a]");
+      } else {
+        appendTerminal(`[${tstamp()}] backend unreachable — showing last known state`, "text-[#e0726a]");
+      }
+
+      // Gentle polling while idle
+      setInterval(() => {
+        if (state.isRunning || document.hidden) return;
+        refreshStatus();
+        refreshHistory();
+        refreshRemote();
+      }, 30000);
+    })();
+  });
+</script>
+</body></html>

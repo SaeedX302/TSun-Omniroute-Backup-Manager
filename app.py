@@ -26,6 +26,17 @@ import backup_engine
 
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parent
 STATIC_DIR = PROJECT_ROOT / "static"
+TEMPLATE_INDEX = PROJECT_ROOT / "templates" / "index.html"
+
+# Whitelisted project files exposed read-only through GET /api/source?name=<key>
+SOURCE_FILES: Dict[str, pathlib.Path] = {
+    "backup_engine.py": PROJECT_ROOT / "backup_engine.py",
+    "app.py": PROJECT_ROOT / "app.py",
+    "config.json": PROJECT_ROOT / "config.json",
+    "install.sh": PROJECT_ROOT / "install.sh",
+    "README.md": PROJECT_ROOT / "README.md",
+    "systemd/omniroute-dashboard.service": PROJECT_ROOT / "systemd" / "omniroute-dashboard.service",
+}
 
 logger = logging.getLogger("omniroute_web")
 
@@ -100,7 +111,11 @@ class OmniRouteRequestHandler(http.server.SimpleHTTPRequestHandler):
         route = parsed.path
 
         if route == "/api/status":
-            self._send_json({"ok": True, "data": backup_engine.get_system_overview()})
+            payload = backup_engine.get_system_overview()
+            payload["server_pid"] = os.getpid()
+            payload["server_port"] = self.server.server_address[1]
+            payload["project_root"] = str(PROJECT_ROOT)
+            self._send_json({"ok": True, "data": payload})
             return
 
         if route == "/api/history":
@@ -123,8 +138,35 @@ class OmniRouteRequestHandler(http.server.SimpleHTTPRequestHandler):
             self._send_json({"ok": True, "log": log_text})
             return
 
+        if route == "/api/source":
+            query = urllib.parse.parse_qs(parsed.query)
+            name = (query.get("name", [""])[0] or "").strip()
+            target = SOURCE_FILES.get(name)
+            if target is None or not target.is_file():
+                self._send_json(
+                    {"ok": False, "error": f"Unknown source file: {name}", "files": list(SOURCE_FILES)},
+                    status=HTTPStatus.NOT_FOUND,
+                )
+                return
+            try:
+                content = target.read_text(encoding="utf-8", errors="replace")
+            except Exception as exc:
+                self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+                return
+            self._send_json({"ok": True, "name": name, "content": content, "files": list(SOURCE_FILES)})
+            return
+
         if route in ("/", "/index.html"):
-            self.path = "/index.html"
+            if TEMPLATE_INDEX.is_file():
+                body = TEMPLATE_INDEX.read_bytes()
+                self.send_response(HTTPStatus.OK)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            logger.warning("Dashboard template missing: %s", TEMPLATE_INDEX)
         return super().do_GET()
 
     def do_POST(self) -> None:
