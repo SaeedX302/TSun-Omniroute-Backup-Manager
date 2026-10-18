@@ -223,6 +223,7 @@ def _create_allowlist_tar_gz(
         for entry in normalized:
             rel = _safe_rel(entry)
             abs_path = source_dir / rel
+            logger.info("Allowlist add attempt: entry=%s rel=%s abs=%s exists=%s", entry, rel, abs_path, abs_path.exists())
             if not abs_path.exists():
                 logger.info("Allowlist entry missing, skipping: %s (looked for: %s)", entry, abs_path)
                 continue
@@ -231,6 +232,9 @@ def _create_allowlist_tar_gz(
             if rel.name == ".env":
                 logger.info("Packing .env file: %s", abs_path)
             tar.add(str(abs_path), arcname=str(pathlib.Path(top_name) / rel))
+
+            if rel.name == ".env":
+                logger.info("Added .env to tar successfully")
 
     if not archive_path.exists() or archive_path.stat().st_size == 0:
         raise RuntimeError(f"Archive creation produced an empty or missing file: {archive_path}")
