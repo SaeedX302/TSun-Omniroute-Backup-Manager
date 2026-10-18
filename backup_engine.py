@@ -66,8 +66,22 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "delete_local_after_upload": True,
     "verify_remote_after_upload": True,
     "retention_days": 0,
+
+    # Only include these entries from `source_dir` into the tar.gz.
+    # Example source layout shown by user:
+    #   .env
+    #   oauth/
+    #   storage.sqlite
+    #   storage.sqlite-wal
+    "allowlist_entries": [
+        ".env",
+        "oauth",
+        "storage.sqlite",
+        "storage.sqlite-wal",
+    ],
+
     "dashboard_host": "0.0.0.0",
-    "dashboard_port": 8080,
+    "dashboard_port": 20363,
 }
 
 
@@ -144,6 +158,7 @@ def get_directory_stats(path: pathlib.Path) -> Dict[str, Any]:
         for fname in files:
             fpath = pathlib.Path(root) / fname
             try:
+
                 if not fpath.is_symlink():
                     total_bytes += fpath.stat().st_size
                     file_count += 1
@@ -178,12 +193,63 @@ def run_cmd(cmd: List[str], timeout: int = 600) -> Tuple[int, str, str]:
         return 1, "", str(exc)
 
 
+def _create_allowlist_tar_gz(
+    source_dir: pathlib.Path,
+    archive_path: pathlib.Path,
+    allowlist_entries: List[str],
+) -> int:
+    """Create tar.gz containing only selected entries under `source_dir`.
+
+    `allowlist_entries` values are relative paths under `source_dir`.
+    Each entry can be a file (e.g., `.env`) or a directory (e.g., `oauth`).
+
+    Archive layout preserves the top-level directory name (e.g. `.omniroute/...`).
+    """
+    if not source_dir.exists():
+        raise FileNotFoundError(f"Source directory does not exist: {source_dir}")
+
+    normalized = [e.strip().lstrip("./") for e in allowlist_entries if str(e).strip()]
+    if not normalized:
+        raise ValueError("allowlist_entries is empty; refusing to create an empty/unsafe backup.")
+
+    archive_path.parent.mkdir(parents=True, exist_ok=True)
+    if archive_path.exists():
+        archive_path.unlink()
+
+    top_name = source_dir.name
+
+    def _safe_rel(entry: str) -> pathlib.Path:
+        # Prevent escaping the source directory.
+        rel = pathlib.Path(entry)
+        if rel.is_absolute() or ".." in rel.parts:
+            raise ValueError(f"Invalid allowlist entry (path traversal not allowed): {entry!r}")
+        return rel
+
+    with tarfile.open(archive_path, "w:gz", compresslevel=6) as tar:
+        for entry in normalized:
+            rel = _safe_rel(entry)
+            abs_path = source_dir / rel
+            if not abs_path.exists():
+                # Missing entries are fine, but we still want deterministic archives.
+                logger.info("Allowlist entry missing, skipping: %s", entry)
+                continue
+
+            # Preserve `.omniroute/...` layout.
+            tar.add(str(abs_path), arcname=str(pathlib.Path(top_name) / rel))
+
+    if not archive_path.exists() or archive_path.stat().st_size == 0:
+        raise RuntimeError(f"Archive creation produced an empty or missing file: {archive_path}")
+
+    with tarfile.open(archive_path, "r:gz") as check_tar:
+        members = check_tar.getmembers()
+        if not members:
+            raise RuntimeError("Created tar.gz archive contains zero members.")
+
+    return archive_path.stat().st_size
+
+
 def create_tar_gz(source_dir: pathlib.Path, archive_path: pathlib.Path) -> int:
-    """
-    Compresses `source_dir` (e.g., `/home/saeed/.omniroute`) into `archive_path`
-    (`omniroute-dd-mm-yy.tar.gz`), preserving the `.omniroute` top-level folder inside the archive.
-    Verifies the resulting archive is a valid tar.gz and returns its byte size.
-    """
+    """Backward-compatible behavior: compress full `source_dir`."""
     if not source_dir.exists():
         raise FileNotFoundError(f"Source directory does not exist: {source_dir}")
 
@@ -197,7 +263,6 @@ def create_tar_gz(source_dir: pathlib.Path, archive_path: pathlib.Path) -> int:
     if not archive_path.exists() or archive_path.stat().st_size == 0:
         raise RuntimeError(f"Archive creation produced an empty or missing file: {archive_path}")
 
-    # Verify archive header & member table readability
     with tarfile.open(archive_path, "r:gz") as check_tar:
         members = check_tar.getmembers()
         if not members:
@@ -301,11 +366,17 @@ def execute_backup(trigger_type: str = "cron") -> Dict[str, Any]:
                 "Verify the path in config.json or create /home/saeed/.omniroute."
             )
 
-        log_step(f"Compressing '{source_dir}' -> '{local_archive}' ...")
-        archive_size = create_tar_gz(source_dir, local_archive)
+        log_step(f"Compressing allowlisted entries from '{source_dir}' -> '{local_archive}' ...")
+
+        allowlist_entries = cfg.get(
+            "allowlist_entries",
+            [".env", "oauth", "storage.sqlite", "storage.sqlite-wal"],
+        )
+
+        archive_size = _create_allowlist_tar_gz(source_dir, local_archive, allowlist_entries)
         sha256_hex = compute_sha256(local_archive)
         log_step(
-            f"Compression complete: {archive_name} ({archive_size:,} bytes, SHA-256: {sha256_hex[:16]}...)"
+            f"Compression complete (allowlist): {archive_name} ({archive_size:,} bytes, SHA-256: {sha256_hex[:16]}...)"
         )
 
         # Ensure destination folder (/omnirote) exists on Google Drive
