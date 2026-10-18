@@ -222,7 +222,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="OmniRoute Backup Manager Web Dashboard")
     cfg = backup_engine.load_config()
     parser.add_argument("--host", default=cfg.get("dashboard_host", "0.0.0.0"), help="Bind host (default 0.0.0.0)")
-    parser.add_argument("--port", type=int, default=int(cfg.get("dashboard_port", 8080)), help="Bind port (default 8080)")
+    parser.add_argument("--port", type=int, default=int(cfg.get("dashboard_port", 20363)), help="Bind port (default 20363)")
     parser.add_argument(
         "--with-scheduler",
         action="store_true",

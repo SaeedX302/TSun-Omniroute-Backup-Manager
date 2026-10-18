@@ -143,4 +143,4 @@ ls -la /tmp/omniroute-*.tar.gz
 ```
 
 
-Then open **`http://localhost:8080`** in your browser to trigger backups on demand, inspect `/omnirote` files on Google Drive, check SHA-256 checksums, edit schedule settings, tail logs, inspect source files, and sync the crontab — everything runs against the live API, no mock data.
+Then open **`http://localhost:20363`** in your browser to trigger backups on demand, inspect `/omnirote` files on Google Drive, check SHA-256 checksums, edit schedule settings, tail logs, inspect source files, and sync the crontab — everything runs against the live API, no mock data.

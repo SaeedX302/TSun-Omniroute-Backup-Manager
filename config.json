@@ -14,5 +14,5 @@
   "verify_remote_after_upload": true,
   "retention_days": 0,
   "dashboard_host": "127.0.0.1",
-  "dashboard_port": 20371
+  "dashboard_port": 20363
 }

@@ -67,12 +67,6 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "verify_remote_after_upload": True,
     "retention_days": 0,
 
-    # Only include these entries from `source_dir` into the tar.gz.
-    # Example source layout shown by user:
-    #   .env
-    #   oauth/
-    #   storage.sqlite
-    #   storage.sqlite-wal
     "allowlist_entries": [
         ".env",
         "oauth",

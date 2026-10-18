@@ -39,7 +39,7 @@ if command -v systemctl >/dev/null 2>&1; then
     sudo systemctl daemon-reload
     sudo systemctl enable omniroute-dashboard.service
     sudo systemctl restart omniroute-dashboard.service
-    echo "[✓] Web Frontend running on port 8080 (systemd service active)."
+    echo "[✓] Web Frontend running on port 20363 (systemd service active)."
 fi
 
 echo ""
@@ -48,5 +48,5 @@ echo " Installation Complete!"
 echo " - Daily Cron Job: 1 0 * * * (12:01 AM every day)"
 echo " - Archive Format: omniroute-dd-mm-yy.tar.gz"
 echo " - Google Drive Folder: gdrive:omnirote"
-echo " - Web Dashboard: http://$(hostname -I | awk '{print $1}'):8080"
+echo " - Web Dashboard: http://$(hostname -I | awk '{print $1}'):${DASHBOARD_PORT}"
 echo "============================================================"
