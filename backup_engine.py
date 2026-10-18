@@ -224,11 +224,12 @@ def _create_allowlist_tar_gz(
             rel = _safe_rel(entry)
             abs_path = source_dir / rel
             if not abs_path.exists():
-                # Missing entries are fine, but we still want deterministic archives.
-                logger.info("Allowlist entry missing, skipping: %s", entry)
+                logger.info("Allowlist entry missing, skipping: %s (looked for: %s)", entry, abs_path)
                 continue
 
             # Preserve `.omniroute/...` layout.
+            if rel.name == ".env":
+                logger.info("Packing .env file: %s", abs_path)
             tar.add(str(abs_path), arcname=str(pathlib.Path(top_name) / rel))
 
     if not archive_path.exists() or archive_path.stat().st_size == 0:
@@ -366,6 +367,14 @@ def execute_backup(trigger_type: str = "cron") -> Dict[str, Any]:
             "allowlist_entries",
             [".env", "oauth", "storage.sqlite", "storage.sqlite-wal"],
         )
+
+        # Ensure `.env` is included even if config uses a different casing.
+        # Users often have `.env` exactly, but being defensive avoids silent misses.
+        allowlist_entries = [
+            ".env" if str(e).strip().lower() == ".env" else str(e).strip()
+            for e in allowlist_entries
+            if str(e).strip()
+        ]
 
         archive_size = _create_allowlist_tar_gz(source_dir, local_archive, allowlist_entries)
         sha256_hex = compute_sha256(local_archive)
