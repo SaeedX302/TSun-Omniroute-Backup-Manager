@@ -202,7 +202,17 @@ def _create_allowlist_tar_gz(
     if not source_dir.exists():
         raise FileNotFoundError(f"Source directory does not exist: {source_dir}")
 
-    normalized = [e.strip().lstrip("./") for e in allowlist_entries if str(e).strip()]
+    normalized: List[str] = []
+    for e in allowlist_entries:
+        if not str(e).strip():
+            continue
+        s = str(e).strip()
+        # Remove only a leading "./" prefix (not the dotfile leading dot itself).
+        if s.startswith("./"):
+            s = s.removeprefix("./")
+        # Also normalize accidental leading slashes.
+        s = s.lstrip("/")
+        normalized.append(s)
     if not normalized:
         raise ValueError("allowlist_entries is empty; refusing to create an empty/unsafe backup.")
 
@@ -220,21 +230,30 @@ def _create_allowlist_tar_gz(
         return rel
 
     with tarfile.open(archive_path, "w:gz", compresslevel=6) as tar:
+        # tarfile doesn't do shell glob expansion, but we must ensure we add hidden files
+        # explicitly (like `.env`). We do that by referencing the absolute path.
         for entry in normalized:
             rel = _safe_rel(entry)
             abs_path = source_dir / rel
-            logger.info("Allowlist add attempt: entry=%s rel=%s abs=%s exists=%s", entry, rel, abs_path, abs_path.exists())
+            logger.info(
+                "Allowlist add attempt: entry=%s rel=%s abs=%s exists=%s",
+                entry,
+                rel,
+                abs_path,
+                abs_path.exists(),
+            )
             if not abs_path.exists():
                 logger.info("Allowlist entry missing, skipping: %s (looked for: %s)", entry, abs_path)
                 continue
 
             # Preserve `.omniroute/...` layout.
-            if rel.name == ".env":
-                logger.info("Packing .env file: %s", abs_path)
-            tar.add(str(abs_path), arcname=str(pathlib.Path(top_name) / rel))
+            arc = str(pathlib.Path(top_name) / rel)
 
             if rel.name == ".env":
-                logger.info("Added .env to tar successfully")
+                logger.info("Packing .env file: %s as arcname=%s", abs_path, arc)
+
+            # Recursive is required for directory entries like `oauth`.
+            tar.add(str(abs_path), arcname=arc, recursive=True)
 
     if not archive_path.exists() or archive_path.stat().st_size == 0:
         raise RuntimeError(f"Archive creation produced an empty or missing file: {archive_path}")
@@ -373,12 +392,12 @@ def execute_backup(trigger_type: str = "cron") -> Dict[str, Any]:
         )
 
         # Ensure `.env` is included even if config uses a different casing.
-        # Users often have `.env` exactly, but being defensive avoids silent misses.
         allowlist_entries = [
             ".env" if str(e).strip().lower() == ".env" else str(e).strip()
             for e in allowlist_entries
             if str(e).strip()
         ]
+        log_step(f"Allowlist entries: {allowlist_entries}")
 
         archive_size = _create_allowlist_tar_gz(source_dir, local_archive, allowlist_entries)
         sha256_hex = compute_sha256(local_archive)
